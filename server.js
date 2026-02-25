@@ -1,6 +1,5 @@
 // ============================================
-// CNBC ARABIA TICKER - COMPLETE FREE VERSION
-// Full Arabic translations, real stock data, green/red triangles
+// CNBC ARABIA TICKER - CORS ENABLED VERSION
 // ============================================
 
 const express = require('express');
@@ -8,7 +7,24 @@ const axios = require('axios');
 const app = express();
 
 // ============================================
-// STOCK DATA FROM YAHOO FINANCE (FREE)
+// CORS - ALLOW ALL ORIGINS (REQUIRED FOR SINGULAR)
+// ============================================
+
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+  
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    res.sendStatus(200);
+  } else {
+    next();
+  }
+});
+
+// ============================================
+// STOCK DATA FROM YAHOO FINANCE
 // ============================================
 
 async function getStockData(symbol) {
@@ -41,7 +57,7 @@ async function getStockData(symbol) {
 }
 
 // ============================================
-// TRANSLATION DICTIONARY
+// TRANSLATIONS
 // ============================================
 
 const stockNames = {
@@ -92,7 +108,7 @@ app.get("/", (request, response) => {
   `);
 });
 
-// MARKET DATA RSS - Real stocks with Arabic names and triangles
+// MARKET DATA RSS
 app.get("/market-rss", async (req, res) => {
   try {
     const stocks = ['AAPL', 'TSLA', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'META', 'SPY', 'QQQ'];
@@ -111,8 +127,6 @@ app.get("/market-rss", async (req, res) => {
         const triangle = stock.isUp ? '▲' : '▼';
         const color = stock.isUp ? 'green' : 'red';
         const arabicName = stockNames[stock.symbol] || stock.symbol;
-        
-        // Build Arabic headline: "▲ آبل يرتفع 2.24% إلى $272.14"
         const direction = stock.isUp ? 'يرتفع' : 'ينخفض';
         const arTitle = `${triangle} ${arabicName} ${direction} ${Math.abs(stock.changePercent)}% إلى $${stock.price}`;
         
@@ -128,6 +142,7 @@ app.get("/market-rss", async (req, res) => {
     output += '</rss>';
     
     res.set('Content-Type', 'application/rss+xml; charset=utf-8');
+    res.set('Access-Control-Allow-Origin', '*');
     res.send(output);
     
   } catch (error) {
@@ -135,7 +150,7 @@ app.get("/market-rss", async (req, res) => {
   }
 });
 
-// NEWS RSS - Fully translated to Arabic
+// NEWS RSS
 app.get("/news-rss", async (req, res) => {
   try {
     const newsItems = [
@@ -173,6 +188,7 @@ app.get("/news-rss", async (req, res) => {
     output += '</rss>';
     
     res.set('Content-Type', 'application/rss+xml; charset=utf-8');
+    res.set('Access-Control-Allow-Origin', '*');
     res.send(output);
     
   } catch (error) {
