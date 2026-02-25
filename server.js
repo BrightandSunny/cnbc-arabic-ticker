@@ -1,5 +1,6 @@
 // ============================================
-// CNBC ARABIA TICKER - CORS ENABLED VERSION
+// CNBC ARABIA TICKER - CLASSIC STYLE
+// Green ▲ for UP, Red ▼ for DOWN
 // ============================================
 
 const express = require('express');
@@ -7,7 +8,7 @@ const axios = require('axios');
 const app = express();
 
 // ============================================
-// CORS - ALLOW ALL ORIGINS (REQUIRED FOR SINGULAR)
+// CORS - ALLOW ALL ORIGINS
 // ============================================
 
 app.use((req, res, next) => {
@@ -15,7 +16,6 @@ app.use((req, res, next) => {
   res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
   
-  // Handle preflight requests
   if (req.method === 'OPTIONS') {
     res.sendStatus(200);
   } else {
@@ -72,18 +72,30 @@ const stockNames = {
   'QQQ': 'ناسداك 100'
 };
 
-const newsTranslations = {
-  'S&P 500 hits new record high amid tech rally': 'إس آند بي 500 يسجل مستوى قياسي جديد بدعم من قطاع التكنولوجيا',
-  'Oil prices surge on Middle East tensions': 'أسعار النفط ترتفع مع تصاعد التوترات في الشرق الأوسط',
-  'Federal Reserve signals potential rate cuts': 'الاحتياطي الفيدرالي يشير إلى احتمال خفض أسعار الفائدة',
-  'Dollar strengthens against major currencies': 'الدولار يقوى مقابل العملات الرئيسية',
-  'Tech stocks lead market gains': 'أسهم التكنولوجيا تقود مكاسب السوق',
-  'Inflation data shows cooling prices': 'بيانات التضخم تظهر تباطؤ الأسعار',
-  'Bitcoin reaches new all-time high': 'البيتكوين يسجل مستوى قياسي جديد',
-  'Gold prices rise on safe-haven demand': 'أسعار الذهب ترتفع مع الطلب على الملاذات الآمنة',
-  'Apple announces record quarterly earnings': 'آبل تعلن عن أرباح فصلية قياسية',
-  'Tesla deliveries exceed analyst expectations': 'تسلا تتجاوز توقعات المحللين في التسليمات'
-};
+// ============================================
+// CNBC STYLE FORMATTING
+// ============================================
+
+function formatCNBCStyle(stock) {
+  const arabicName = stockNames[stock.symbol] || stock.symbol;
+  
+  // CNBC Classic: ▲ for UP (green), ▼ for DOWN (red)
+  const triangle = stock.isUp ? '▲' : '▼';
+  const color = stock.isUp ? 'green' : 'red';
+  
+  // Format: "▲ آبل +2.24% $272.14" or "▼ تسلا -1.50% $242.50"
+  const sign = stock.isUp ? '+' : '';
+  const changeStr = `${sign}${stock.changePercent}%`;
+  
+  // Arabic format: Triangle + Name + Change% + Price
+  const title = `${triangle} ${arabicName} ${changeStr} $${stock.price}`;
+  
+  return {
+    title: title,
+    color: color,
+    description: `Price: $${stock.price} | Change: ${stock.changePercent}%`
+  };
+}
 
 // ============================================
 // ROUTES
@@ -98,17 +110,15 @@ app.get("/", (request, response) => {
     <hr>
     <h2>Your RSS Feeds:</h2>
     <ul>
-      <li>📈 <a href="/market-rss">Market Data RSS (with Green/Red Triangles)</a></li>
-      <li>📰 <a href="/news-rss">News RSS (Arabic Translated)</a></li>
+      <li>📈 <a href="/market-rss">Market Data RSS (CNBC Classic Style)</a></li>
     </ul>
     <hr>
     <p><strong>For Singular:</strong></p>
     <p>Market RSS: <code>https://cnbc-arabic-ticker.onrender.com/market-rss</code></p>
-    <p>News RSS: <code>https://cnbc-arabic-ticker.onrender.com/news-rss</code></p>
   `);
 });
 
-// MARKET DATA RSS
+// MARKET DATA RSS - CNBC Classic Style
 app.get("/market-rss", async (req, res) => {
   try {
     const stocks = ['AAPL', 'TSLA', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'META', 'SPY', 'QQQ'];
@@ -119,69 +129,19 @@ app.get("/market-rss", async (req, res) => {
     output += '<channel>\n';
     output += '  <title>CNBC Arabia Style - Market Data</title>\n';
     output += '  <link>https://cnbc-arabic-ticker.onrender.com</link>\n';
-    output += '  <description>Real-time stock market data with Arabic translation</description>\n';
+    output += '  <description>Real-time stock market data - CNBC Classic Style</description>\n';
     output += '  <lastBuildDate>' + new Date().toUTCString() + '</lastBuildDate>\n';
     
     for (const stock of stockData) {
       if (stock) {
-        const triangle = stock.isUp ? '▲' : '▼';
-        const color = stock.isUp ? 'green' : 'red';
-        const arabicName = stockNames[stock.symbol] || stock.symbol;
-        const direction = stock.isUp ? 'يرتفع' : 'ينخفض';
-        const arTitle = `${triangle} ${arabicName} ${direction} ${Math.abs(stock.changePercent)}% إلى $${stock.price}`;
+        const formatted = formatCNBCStyle(stock);
         
         output += '  <item>\n';
-        output += `    <title><![CDATA[${arTitle}]]></title>\n`;
-        output += `    <description>Price: $${stock.price} | Change: ${stock.changePercent}%</description>\n`;
-        output += `    <category>${color}</category>\n`;
+        output += `    <title><![CDATA[${formatted.title}]]></title>\n`;
+        output += `    <description>${formatted.description}</description>\n`;
+        output += `    <category>${formatted.color}</category>\n`;
         output += '  </item>\n';
       }
-    }
-    
-    output += '</channel>\n';
-    output += '</rss>';
-    
-    res.set('Content-Type', 'application/rss+xml; charset=utf-8');
-    res.set('Access-Control-Allow-Origin', '*');
-    res.send(output);
-    
-  } catch (error) {
-    res.status(500).send('Error: ' + error.message);
-  }
-});
-
-// NEWS RSS
-app.get("/news-rss", async (req, res) => {
-  try {
-    const newsItems = [
-      { en: 'S&P 500 hits new record high amid tech rally', category: 'green' },
-      { en: 'Oil prices surge on Middle East tensions', category: 'red' },
-      { en: 'Federal Reserve signals potential rate cuts', category: 'green' },
-      { en: 'Dollar strengthens against major currencies', category: 'green' },
-      { en: 'Tech stocks lead market gains', category: 'green' },
-      { en: 'Inflation data shows cooling prices', category: 'green' },
-      { en: 'Bitcoin reaches new all-time high', category: 'green' },
-      { en: 'Gold prices rise on safe-haven demand', category: 'green' },
-      { en: 'Apple announces record quarterly earnings', category: 'green' },
-      { en: 'Tesla deliveries exceed analyst expectations', category: 'green' }
-    ];
-    
-    let output = '<?xml version="1.0" encoding="UTF-8"?>\n';
-    output += '<rss version="2.0">\n';
-    output += '<channel>\n';
-    output += '  <title>CNBC Arabia Style - Financial News</title>\n';
-    output += '  <link>https://cnbc-arabic-ticker.onrender.com</link>\n';
-    output += '  <description>Financial news in Arabic</description>\n';
-    output += '  <lastBuildDate>' + new Date().toUTCString() + '</lastBuildDate>\n';
-    
-    for (const item of newsItems) {
-      const arTitle = newsTranslations[item.en] || item.en;
-      
-      output += '  <item>\n';
-      output += `    <title><![CDATA[${arTitle}]]></title>\n`;
-      output += `    <description><![CDATA[${item.en}]]></description>\n`;
-      output += `    <category>${item.category}</category>\n`;
-      output += '  </item>\n';
     }
     
     output += '</channel>\n';
