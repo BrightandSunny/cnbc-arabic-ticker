@@ -1,6 +1,6 @@
 // ============================================
-// CNBC ARABIA TICKER - CLASSIC STYLE
-// Green ▲ for UP, Red ▼ for DOWN
+// CNBC ARABIA TICKER - EMBEDDED COLORS VERSION
+// Green ▲ and Red ▼ built into the RSS feed
 // ============================================
 
 const express = require('express');
@@ -73,26 +73,24 @@ const stockNames = {
 };
 
 // ============================================
-// CNBC STYLE FORMATTING
+// CNBC STYLE FORMATTING WITH EMBEDDED COLORS
 // ============================================
 
 function formatCNBCStyle(stock) {
   const arabicName = stockNames[stock.symbol] || stock.symbol;
   
-  // CNBC Classic: ▲ for UP (green), ▼ for DOWN (red)
+  // CNBC Classic colors
+  const triangleColor = stock.isUp ? '#00C851' : '#FF4444'; // Green or Red
   const triangle = stock.isUp ? '▲' : '▼';
-  const color = stock.isUp ? 'green' : 'red';
-  
-  // Format: "▲ آبل +2.24% $272.14" or "▼ تسلا -1.50% $242.50"
   const sign = stock.isUp ? '+' : '';
   const changeStr = `${sign}${stock.changePercent}%`;
   
-  // Arabic format: Triangle + Name + Change% + Price
-  const title = `${triangle} ${arabicName} ${changeStr} $${stock.price}`;
+  // Build HTML with embedded colors - this will render colored in Singular
+  const title = `<span style="color:${triangleColor};font-size:26px;font-weight:900;">${triangle}</span> <span style="color:${triangleColor};font-weight:bold;">${arabicName}</span> <span style="color:${triangleColor};">${changeStr}</span> <span style="color:#ffffff;">$${stock.price}</span>`;
   
   return {
     title: title,
-    color: color,
+    color: stock.isUp ? 'green' : 'red',
     description: `Price: $${stock.price} | Change: ${stock.changePercent}%`
   };
 }
@@ -110,7 +108,7 @@ app.get("/", (request, response) => {
     <hr>
     <h2>Your RSS Feeds:</h2>
     <ul>
-      <li>📈 <a href="/market-rss">Market Data RSS (CNBC Classic Style)</a></li>
+      <li>📈 <a href="/market-rss">Market Data RSS (CNBC Style with Colors)</a></li>
     </ul>
     <hr>
     <p><strong>For Singular:</strong></p>
@@ -118,7 +116,7 @@ app.get("/", (request, response) => {
   `);
 });
 
-// MARKET DATA RSS - CNBC Classic Style
+// MARKET DATA RSS - CNBC Style with Embedded HTML Colors
 app.get("/market-rss", async (req, res) => {
   try {
     const stocks = ['AAPL', 'TSLA', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'META', 'SPY', 'QQQ'];
